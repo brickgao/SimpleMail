@@ -9,6 +9,9 @@ class pop3:
         self.url = url
         self.port = port
         self.loginSucc = False
+        self.totalMail = 0
+        self.totalSize = 0
+        self.simpleMailList = []
         self.logger = logging.Logger(__name__)
 
 
@@ -66,9 +69,33 @@ class pop3:
             return False, _
         else:
             self.logger.info(_[:-2])
-            return True, _[4:-2].split('\r\n')[:-1]
+            _list = _[4:-2].split('\r\n')[1:-1]
+            self.simpleMailList = []
+            for _t in _list:
+                _d = {}
+                _d['id'] = _t.split(' ')[0]
+                _d['size'] = _t.split(' ')[1]
+                self.simpleMailList.append(_d)
+            return True, _
 
+    def getStat(self):
 
+        if not self.loginSucc:
+            self.logger.error('You should login first')
+            return False, 'You should login first'
+
+        self.sock.sendall('STAT\r\n')
+        self.logger.info('STAT')
+
+        _ = self.sock.recv(1024)
+        if not '+OK' in _:
+            self.logger.error(_[:-2])
+            return False, _
+        else:
+            self.logger.info(_[:-2])
+            self.totalMail = int(_[:-2].split(' ')[1])
+            self.totalSize = int(_[:-2].split(' ')[2])
+            return True, _
 
 if __name__ == '__main__':
 
@@ -80,3 +107,4 @@ if __name__ == '__main__':
     _user, _pass = raw_input().split(' ')
     pop.login(_user, _pass)
     pop.getList()
+    pop.getStat()
