@@ -60,6 +60,7 @@ class pop3:
             self.logger.error('You should login first')
             return False, 'You should login first'
 
+        # Send LIST
         self.sock.sendall('LIST\r\n')
         self.logger.info('LIST')
 
@@ -71,6 +72,7 @@ class pop3:
             self.logger.info(_[:-2])
             _list = _[4:-2].split('\r\n')[1:-1]
             self.simpleMailList = []
+            # Format list information
             for _t in _list:
                 _d = {}
                 _d['id'] = _t.split(' ')[0]
@@ -84,6 +86,7 @@ class pop3:
             self.logger.error('You should login first')
             return False, 'You should login first'
 
+        # Send STAT
         self.sock.sendall('STAT\r\n')
         self.logger.info('STAT')
 
@@ -93,6 +96,7 @@ class pop3:
             return False, _
         else:
             self.logger.info(_[:-2])
+            # Format stat information
             self.totalMail = int(_[:-2].split(' ')[1])
             self.totalSize = int(_[:-2].split(' ')[2])
             return True, _
