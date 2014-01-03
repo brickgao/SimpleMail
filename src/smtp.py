@@ -10,6 +10,12 @@ class smtp:
         self.port = port
         self.logger = logging.Logger(__name__)
         self.heloSucc = False
+        self.server = ''
+        _ = url.split('.')
+        for i in range(1, len(_)):
+            if i == len(_) - 1: self.server += _[i]
+            else:               self.server += _[i] + '.'
+        print self.server
 
 
     def sendHelo(self):
@@ -18,8 +24,8 @@ class smtp:
         self.sock.connect((self.url, self.port))
         
         # Send HELO
-        self.sock.sendall('HELO\r\n')
-        self.logger.info('HELO')
+        self.sock.sendall('HELO ' + self.server + '\r\n')
+        self.logger.info('HELO ' + self.server)
 
         _ = self.sock.recv(1024)
         if not '220' in _:
@@ -31,8 +37,29 @@ class smtp:
             return True, _
 
 
-    def setRcpt(self, _to):
+    def initMail(self, _from):
         
-        pass
+        if not self.heloSucc:
+            self.logger.error('You should say HELO first')
+            return False, 'You should say HELO first'
+
+        # Init mail transfer
+        self.sock.sendall('mail from: <' + _from + '>\r\n')
+        self.logger.info('mail from: <' + _from + '>')
+
+        _ = self.sock.recv(1024)
+        print _
+        
+
+
+
+    def setRcpt(self, _to):
+
+        if not self.heloSucc:
+            self.logger.error('You should say HELO first')
+            return False, 'You should say HELO first'
+
+        self.sock.sendall('RCPT ' + _to + '\r\n')
+        
 
 
