@@ -1,6 +1,6 @@
 # -*- coding:utf8 -*-
 
-import socket, logging
+import socket, logging, base64
 
 class smtp:
     
@@ -15,7 +15,6 @@ class smtp:
         for i in range(1, len(_)):
             if i == len(_) - 1: self.server += _[i]
             else:               self.server += _[i] + '.'
-        print self.server
 
 
     def sendHelo(self):
@@ -24,16 +23,60 @@ class smtp:
         self.sock.connect((self.url, self.port))
         
         # Send HELO
-        self.sock.sendall('HELO ' + self.server + '\r\n')
-        self.logger.info('HELO ' + self.server)
+        self.sock.sendall('EHLO ' + self.server + '\r\n')
+        self.logger.info('EHLO ' + self.server)
 
         _ = self.sock.recv(1024)
         if not '220' in _:
-            self.logger.error(_)
+            self.logger.error(_[:-2])
             return False, _
         else:
-            self.logger.info(_)
+            self.logger.info(_[:-2])
+            _ = self.sock.recv(1024)
+            self.logger.info(_[:-2])
             self.heloSucc = True
+            return True, _
+
+    def login(self, username, passwd):
+
+        if not self.heloSucc:
+            self.logger.error('You should say HELO first')
+            return False, 'You should say HELO first'
+
+        self.username = username
+        self.passwd = passwd
+
+        # Authentication use LOGIN type
+        
+        self.sock.send('AUTH LOGIN\r\n')
+        self.logger.info('AUTH LOGIN')
+
+        _ = self.sock.recv(1024)
+        if not '334' in _:
+            self.logger.error(_[:-2])
+            return False, _
+        else:
+            self.logger.info(_[:-2])
+
+        self.sock.send(base64.b64encode(self.username) + '\r\n')
+        self.logger.info(base64.b64encode(self.username))
+
+        _ = self.sock.recv(1024)
+        if not '334' in _:
+            self.logger.error(_[:-2])
+            return False, _
+        else:
+            self.logger.info(_[:-2])
+
+        self.sock.send(base64.b64encode(self.passwd) + '\r\n')
+        self.logger.info('***')
+
+        _ = self.sock.recv(1024)
+        if not '235' in _:
+            self.logger.error(_[:-2])
+            return False, _
+        else:
+            self.logger.info(_[:-2])
             return True, _
 
 
@@ -49,10 +92,10 @@ class smtp:
 
         _ = self.sock.recv(1024)
         if not '250' in _:
-            self.logger.error(_)
+            self.logger.error(_[:-2])
             return False, _
         else:
-            self.logger.info(_)
+            self.logger.info(_[:-2])
             return True, _
 
 
@@ -62,7 +105,17 @@ class smtp:
             self.logger.error('You should say HELO first')
             return False, 'You should say HELO first'
 
-        self.sock.sendall('RCPT ' + _to + '\r\n')
+        # Set Rcpt of mail
+        self.sock.sendall('rcpt to: <' + _to + '>\r\n')
+        self.logger.info('rcpt to: <' + _to + '>')
+
+        _ = self.sock.recv(1024)
+        if not '250' in _:
+            self.logger.error(_[:-2])
+            return False, _
+        else:
+            self.logger.info(_[:-2])
+            return True, _
         
 
 
