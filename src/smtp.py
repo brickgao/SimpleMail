@@ -116,6 +116,36 @@ class smtp:
         else:
             self.logger.info(_[:-2])
             return True, _
+
+    def setData(self, _data):
+
+        if not self.heloSucc:
+            self.logger.error('You should say HELO first')
+            return False, 'You should say HELO first'
+
+        # Set Data of mail
+
+        self.sock.sendall('DATA\r\n')
+        self.logger.info('DATA')
+
+        _ = self.sock.recv(1024)
+        if not '354' in _:
+            self.logger.error(_[:-2])
+            return False, _
+        else:
+            self.logger.info(_[:-2])
+        
+        self.sock.sendall('subject: ' + _data['subject'] + '\r\n')
+        self.sock.sendall(_data['content'] + '\r\n')
+        self.sock.sendall('.\r\n')
+
+        _ = self.sock.recv(1024)
+        if not '250' in _:
+            self.logger.error(_[:-2])
+            return False, _
+        else:
+            self.logger.info(_[:-2])
+            return True, _
         
 
 
