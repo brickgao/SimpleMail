@@ -37,6 +37,7 @@ class smtp:
             self.heloSucc = True
             return True, _
 
+
     def login(self, username, passwd):
 
         if not self.heloSucc:
@@ -117,6 +118,7 @@ class smtp:
             self.logger.info(_[:-2])
             return True, _
 
+
     def setData(self, _data):
 
         if not self.heloSucc:
@@ -146,6 +148,24 @@ class smtp:
         else:
             self.logger.info(_[:-2])
             return True, _
-        
 
 
+    def quit(self):
+
+        if not self.heloSucc:
+            self.logger.error('You should say HELO first')
+            return False, 'You should say HELO first'
+
+        self.sock.sendall('QUIT\r\n')
+
+        # Send QUIT
+        _ = self.sock.recv(1024)
+        if not '221' in _:
+            self.logger.error(_[:-2])
+            return False, _
+        else:
+            self.logger.info(_[:-2])
+            return True, _
+
+            
+            
