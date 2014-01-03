@@ -150,6 +150,7 @@ class smtp:
 
         self.sock.sendall(msg.as_string())
         self.sock.sendall('.\r\n')
+        self.logger.info('Transfer mail')
 
         _ = self.sock.recv(1024)
         if not '250' in _:
@@ -168,6 +169,7 @@ class smtp:
 
         # Send QUIT
         self.sock.sendall('QUIT\r\n')
+        self.logger.info('QUIT')
 
         _ = self.sock.recv(1024)
         if not '221' in _:
@@ -186,6 +188,7 @@ class smtp:
         
         # Send RSET
         self.sock.sendall('RSET\r\n')
+        self.logger.info('RSET')
 
         _ = self.sock.recv(1024)
         if not '250' in _:
