@@ -1,6 +1,7 @@
 # -*- coding:utf8 -*-
 
-import socket, logging, base64
+import socket, logging, base64, time
+from email.mime.text import MIMEText
 
 class smtp:
     
@@ -91,6 +92,8 @@ class smtp:
         self.sock.sendall('mail from: <' + _from + '>\r\n')
         self.logger.info('mail from: <' + _from + '>')
 
+        self._from = _from
+
         _ = self.sock.recv(1024)
         if not '250' in _:
             self.logger.error(_[:-2])
@@ -109,6 +112,8 @@ class smtp:
         # Set Rcpt of mail
         self.sock.sendall('rcpt to: <' + _to + '>\r\n')
         self.logger.info('rcpt to: <' + _to + '>')
+
+        self._to = _to
 
         _ = self.sock.recv(1024)
         if not '250' in _:
@@ -137,8 +142,13 @@ class smtp:
         else:
             self.logger.info(_[:-2])
         
-        self.sock.sendall('subject: ' + _data['subject'] + '\r\n')
-        self.sock.sendall(_data['content'] + '\r\n')
+        msg = MIMEText(_data['content'].encode('utf-8'), 'html', 'utf-8')
+        msg['Subject'] = _data['subject']
+        msg['From'] = self._from
+        msg['To'] = self._to
+        msg['data'] = time.strftime('%a, %d %b %Y %H:%M:%S %z')
+
+        self.sock.sendall(msg.as_string())
         self.sock.sendall('.\r\n')
 
         _ = self.sock.recv(1024)
