@@ -135,15 +135,3 @@ class pop3:
             
 
 
-if __name__ == '__main__':
-
-    pop = pop3('pop.163.com', 110)
-    ch = logging.StreamHandler()
-    formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s') 
-    ch.setFormatter(formatter)
-    pop.logger.addHandler(ch)
-    _user, _pass = raw_input().split(' ')
-    pop.login(_user, _pass)
-    pop.getList()
-    pop.getStat()
-    pop.getAllMail()
