@@ -48,9 +48,12 @@ class smtp:
         self.logger.info('mail from: <' + _from + '>')
 
         _ = self.sock.recv(1024)
-        print _
-        
-
+        if not '250' in _:
+            self.logger.error(_)
+            return False, _
+        else:
+            self.logger.info(_)
+            return True, _
 
 
     def setRcpt(self, _to):
