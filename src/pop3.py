@@ -1,6 +1,6 @@
 # -*- coding:utf8 -*-
 
-import socket, logging
+import socket, logging, email
 
 class pop3:
     
@@ -12,6 +12,7 @@ class pop3:
         self.totalMail = 0
         self.totalSize = 0
         self.simpleMailList = []
+        self.mailList = []
         self.logger = logging.Logger(__name__)
 
 
@@ -100,6 +101,39 @@ class pop3:
             self.totalMail = int(_[:-2].split(' ')[1])
             self.totalSize = int(_[:-2].split(' ')[2])
             return True, _
+            
+
+    def getAllMail(self):
+
+        if not self.loginSucc:
+            self.logger.error('You should login first')
+            return False, 'You should login first'
+
+        self.logger.info('Try to get all mail in the mailbox')
+        self.mailList = []
+        for _t in self.simpleMailList:
+            self.sock.sendall('RETR ' + _t['id'] + '\r\n')
+            _ = self.sock.recv(1024)
+            # Return when there is an error
+            if not '+OK' in _:
+                self.logger.error(_[:-2])
+                return False, _
+            else:
+                self.logger.info(_[:-2])
+            _size = int(_t['size'])
+            _mail = ''
+            while _size > 0:
+                _ = self.sock.recv(1024)
+                _size -= len(_)
+                _mail += _
+            # Format the mail
+            _mailobj = email.message_from_string(_mail)
+            self.mailList.append(_mailobj)
+
+        self.logger.info('Got all mail in the mailbox')
+        return True, 'Got all mail'
+            
+
 
 if __name__ == '__main__':
 
@@ -112,3 +146,4 @@ if __name__ == '__main__':
     pop.login(_user, _pass)
     pop.getList()
     pop.getStat()
+    pop.getAllMail()
