@@ -149,6 +149,7 @@ class QMainArea(QtGui.QWidget):
         self.loginBtn.clicked.connect(self.login)
 
         self.logoutBtn = QtGui.QPushButton(u'断开')
+        self.logoutBtn.clicked.connect(self.logout)
 
         self.sendBtn = QtGui.QPushButton(u'发信')
 
@@ -171,6 +172,24 @@ class QMainArea(QtGui.QWidget):
         grid.addWidget(self.mailListView, 1, 4, 7, 5)
 
         self.setLayout(grid)
+
+
+    def logout(self):
+        
+        t = threading.Thread(target=self.logoutRun)
+        t.start()
+
+
+    def logoutRun(self):
+        
+        global mutex
+
+        mutex.acquire()
+
+        self.pop3.quit()
+        self.emit(QtCore.SIGNAL('needRefresh'))
+
+        mutex.release()
 
 
     def login(self):
