@@ -45,8 +45,8 @@ class smtp:
             self.logger.error('You should say HELO first')
             return False, 'You should say HELO first'
 
-        self.username = username
-        self.passwd = passwd
+        self.username = str(username)
+        self.passwd = str(passwd)
 
         # Authentication use LOGIN type
         
