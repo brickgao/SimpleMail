@@ -132,6 +132,26 @@ class pop3:
 
         self.logger.info('Got all mail in the mailbox')
         return True, 'Got all mail'
+
+
+    def quit(self):
+        
+        if not self.loginSucc:
+            self.logger.error('You should login first')
+            return False, 'You should login first'
+
+        self.sock.sendall('QUIT\r\n')
+        self.logger.info('QUIT')
+
+        _ = self.sock.recv(1024)
+        if not '+OK' in _:
+            self.logger.error(_[:-2])
+            return False, _
+        else:
+            self.logger.info(_[:-2])
+            self.loginSucc = False
+            self.mailList = []
+            return True, _
             
 
 
