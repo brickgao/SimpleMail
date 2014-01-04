@@ -24,6 +24,72 @@ class loggerHandler(Handler):
         self.loggerWidget.emit(QtCore.SIGNAL('newLog(QString)'), 
                                              QtCore.QString(self.format(record).decode('gbk')))
 
+
+        
+class QSendMailView(QtGui.QDialog):
+
+    def __init__(self, parent=None):
+        
+        QtGui.QDialog.__init__(self, parent)
+        self.parent = parent
+        self.initLayout()
+
+    def initLayout(self):
+        
+        self.toLable = QtGui.QLabel(u'发件人')
+        self.toText = QtGui.QLineEdit(self)
+
+        self.subjectLable = QtGui.QLabel(u'标题')
+        self.subjectText = QtGui.QLineEdit(self)
+
+        self.contentLable = QtGui.QLabel(u'正文')
+        self.contentText = QtGui.QTextEdit(self)
+
+        self.sendBtn = QtGui.QPushButton(u'发送')
+        self.sendBtn.clicked.connect(self.send)
+
+        grid = QtGui.QGridLayout()
+        grid.setSpacing(10)
+
+        grid.addWidget(self.toLable, 1, 1, 1, 1)
+        grid.addWidget(self.toText, 1, 2, 1, 1)
+        grid.addWidget(self.subjectLable, 2, 1, 1, 1)
+        grid.addWidget(self.subjectText, 2, 2, 1, 1)
+        grid.addWidget(self.contentLable, 3, 1, 1, 1)
+        grid.addWidget(self.contentText, 3, 2, 5, 1)
+        grid.addWidget(self.sendBtn, 8, 1, 1, 2)
+
+        self.setLayout(grid)
+        
+        self.setGeometry(100, 100, 400, 400)
+        self.setWindowTitle(u'发送邮件')
+
+        self.show()
+
+
+    def send(self):
+        
+        if self.toText.text() == '':
+            return self.errorAlert(u'请输入收件人')
+        if self.subjectText.text() == '':
+            return self.errorAlert(u'请输入标题')
+        if self.contentText.toPlainText() == '':
+            return self.errorAlert(u'请输入正文')
+
+        _d = {}
+        _d['to'] = str(self.toText.text())
+        _d['subject'] = str(self.subjectText.text())
+        _d['content'] = str(self.contentText.toPlainText())
+        
+        self.parent._e.emit(_d)
+        
+        self.close()
+
+
+    def errorAlert(self, s):
+
+        QtGui.QMessageBox.critical(self, u'错误', s)
+
         
         
 class QMailInfo(QtGui.QDialog):
@@ -96,6 +162,8 @@ class QMailInfo(QtGui.QDialog):
 
 class QMainArea(QtGui.QWidget):
     
+    _e = QtCore.pyqtSignal(dict, name='sendMail')
+
     def __init__(self):
 
         super(QMainArea, self).__init__()
@@ -143,7 +211,8 @@ class QMainArea(QtGui.QWidget):
                      QtCore.SIGNAL('needRefresh'),
                      self.refreshMailList)
         self.mailListView.itemDoubleClicked.connect(self.getCurrentMail)
-        
+
+        self._e.connect(self.sendMailNow)
 
         self.loginBtn = QtGui.QPushButton(u'登录')
         self.loginBtn.clicked.connect(self.login)
@@ -152,6 +221,7 @@ class QMainArea(QtGui.QWidget):
         self.logoutBtn.clicked.connect(self.logout)
 
         self.sendBtn = QtGui.QPushButton(u'发信')
+        self.sendBtn.clicked.connect(self.sendMail)
 
         grid = QtGui.QGridLayout()
         grid.setSpacing(5)
@@ -214,7 +284,6 @@ class QMainArea(QtGui.QWidget):
         mutex.acquire()
 
         self.pop3.url = str(self.pop3AddressText.text())
-        self.smtp.url = str(self.smtpAddressText.text())
 
         self.pop3.login(self.accountText.text(),
                         self.passwdText.text())
@@ -251,12 +320,56 @@ class QMainArea(QtGui.QWidget):
         mailView.exec_()
         mailView.destroy()
 
+
+    def sendMail(self):
+
+        if self.pop3AddressText.text() == '':
+            return self.errorAlert(u'请填写 POP3 服务器地址')
+        if self.smtpAddressText.text() == '':
+            return self.errorAlert(u'请填写 SMTP 服务器地址')
+        if self.accountText.text() == '':
+            return self.errorAlert(u'请填写用户名')
+        if self.passwdText.text() == '':
+            return self.errorAlert(u'请填写密码')
+
+        sendMailView = QSendMailView(parent=self)
+        sendMailView.exec_()
+        sendMailView.destroy()
+
+    def sendMailNow(self, _d):
+        
+        t = threading.Thread(target=self.sendMailRun, args=(_d, ))
+        t.start()
+
+    
+    def sendMailRun(self, _d):
+        
+        global mutex
+
+        mutex.acquire()
+
+        self.smtp.url = str(self.smtpAddressText.text())
+        self.smtp.server = ''
+        _ = self.smtp.url.split('.')
+        for i in range(1, len(_)):
+            if i == len(_) - 1: self.smtp.server += _[i]
+            else:               self.smtp.server += _[i] + '.'
+
+        self.smtp.sendHelo()
+        self.smtp.login(self.accountText.text(), self.passwdText.text())
+        self.smtp.initMail(str(self.accountText.text()))
+        self.smtp.setRcpt(_d['to'])
+        self.smtp.setData(_d)
+        self.smtp.quit()
+        
+        mutex.release()
+
     
     def errorAlert(self, s):
 
         QtGui.QMessageBox.critical(self, u'错误', s)
 
-        
+
 
 class mainWindow(QtGui.QMainWindow):
 
