@@ -1,6 +1,6 @@
 # -*- coding:utf8 -*-
 
-import sys, threading, time, os
+import sys, threading, time, os, email
 from PyQt4 import QtGui, QtCore
 from smtp import smtp
 from pop3 import pop3
@@ -65,10 +65,16 @@ class QMainArea(QtGui.QWidget):
         
 
         self.mailListView = QtGui.QTreeWidget()
-        self.mailListView.setHeaderLabels([u'时间', 
-                                       u'发件人', 
-                                       u'收件人', 
-                                       u'主题'])
+        self.mailListView.setHeaderLabels([u'#', 
+                                           u'时间', 
+                                           u'发件人', 
+                                           u'收件人', 
+                                           u'主题'])
+        self.mailListView.setColumnWidth(0, 60)
+        self.connect(self,
+                     QtCore.SIGNAL('needRefresh'),
+                     self.refreshMailList)
+        
 
         self.loginBtn = QtGui.QPushButton(u'登录')
         self.loginBtn.clicked.connect(self.login)
@@ -93,7 +99,7 @@ class QMainArea(QtGui.QWidget):
         grid.addWidget(self.sendBtn, 5, 3, 1, 1)
         grid.addWidget(self.logLable, 6, 1, 1, 1)
         grid.addWidget(self.logView, 7, 1, 1, 3)
-        grid.addWidget(self.mailListView, 1, 4, 7, 3)
+        grid.addWidget(self.mailListView, 1, 4, 7, 5)
 
         self.setLayout(grid)
 
@@ -127,6 +133,7 @@ class QMainArea(QtGui.QWidget):
         self.pop3.getList()
         self.pop3.getStat()
         self.pop3.getAllMail()
+        self.emit(QtCore.SIGNAL('needRefresh'))
 
         mutex.release()
 
@@ -134,6 +141,19 @@ class QMainArea(QtGui.QWidget):
     def refreshMailList(self):
         
         self.mailList = self.pop3.mailList
+        self.mailListView.clear()
+        for i in range(len(self.mailList)):
+            _ = self.mailList[i]
+            mailInfo = QtGui.QTreeWidgetItem()
+            _sj = email.Header.decode_header(_.get('subject'))[0][0]
+            _code = email.Header.decode_header(_.get('subject'))[0][1]
+            _sj = _sj.decode(_code)
+            mailInfo.setText(0, str(i))
+            mailInfo.setText(1, _.get('date').split(',')[1][1:])
+            mailInfo.setText(2, email.utils.parseaddr(_.get('from'))[1])
+            mailInfo.setText(3, email.utils.parseaddr(_.get('to'))[1])
+            mailInfo.setText(4, _sj)
+            self.mailListView.addTopLevelItem(mailInfo)
 
     
     def errorAlert(self, s):
