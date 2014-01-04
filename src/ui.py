@@ -1,7 +1,7 @@
 # -*- coding:utf8 -*-
 
 import sys, threading, time, os, email
-from PyQt4 import QtGui, QtCore
+from PyQt4 import QtGui, QtCore, QtWebKit
 from smtp import smtp
 from pop3 import pop3
 from logging import Logger, Handler, getLogger, Formatter
@@ -24,7 +24,75 @@ class loggerHandler(Handler):
         self.loggerWidget.emit(QtCore.SIGNAL('newLog(QString)'), 
                                              QtCore.QString(self.format(record).decode('gbk')))
 
-  
+        
+        
+class QMailInfo(QtGui.QDialog):
+    
+    def __init__(self, mailInfo, parent=None):
+        
+        self.mailInfo = mailInfo
+        QtGui.QDialog.__init__(self, parent)
+        self.initLayout()
+
+    
+    def initLayout(self):
+
+        _ = self.mailInfo
+
+        self.fromLable = QtGui.QLabel(u'发件人')
+        self._from = QtGui.QLabel(email.utils.parseaddr(_.get('from'))[1])
+
+        self.toLable = QtGui.QLabel(u'收件人')
+        self._to = QtGui.QLabel(email.utils.parseaddr(_.get('to'))[1])
+
+
+        _sj = email.Header.decode_header(_.get('subject'))[0][0]
+        _code = email.Header.decode_header(_.get('subject'))[0][1]
+        _sj = _sj.decode(_code)
+
+        self.subjectLable = QtGui.QLabel(u'主题')
+        self._subject = QtGui.QLabel(_sj)
+
+        self.sendTimeLable = QtGui.QLabel(u'时间')
+        self.sendTime = QtGui.QLabel(_.get('date'))
+
+        self.contentLable = QtGui.QLabel(u'邮件正文')
+        self.contentView = QtWebKit.QWebView()
+
+        content = u''
+        _type = _.get_content_charset()
+        if _type:   _c = _.get_payload(decode='base64')
+        else:       _c = _.get_payload()
+        if _.is_multipart():
+            for _e in _c:
+                content += unicode(_e, _type)
+        else:   
+            content = unicode(_c, _type)
+        self.contentView.setHtml(content, 
+                                 QtCore.QUrl(''))
+
+        grid = QtGui.QGridLayout()
+        grid.setSpacing(10)
+
+        grid.addWidget(self.fromLable, 1, 1, 1, 1)
+        grid.addWidget(self._from, 1, 2, 1, 3)
+        grid.addWidget(self.toLable, 2, 1, 1, 1)
+        grid.addWidget(self._to, 2, 2, 1, 3)
+        grid.addWidget(self.subjectLable, 3, 1, 1, 1)
+        grid.addWidget(self._subject, 3, 2, 1, 3)
+        grid.addWidget(self.sendTimeLable, 4, 1, 1, 1)
+        grid.addWidget(self.sendTime, 4, 2, 1, 3)
+        grid.addWidget(self.contentLable, 5, 1, 1, 1)
+        grid.addWidget(self.contentView, 6, 1, 1, 4)
+    
+        self.setLayout(grid)
+
+        self.setGeometry(120, 120, 800, 500)
+        self.setWindowTitle(u'查看邮件' + _sj)
+        self.show()
+        
+
+        
 
 class QMainArea(QtGui.QWidget):
     
@@ -74,6 +142,7 @@ class QMainArea(QtGui.QWidget):
         self.connect(self,
                      QtCore.SIGNAL('needRefresh'),
                      self.refreshMailList)
+        self.mailListView.itemDoubleClicked.connect(self.getCurrentMail)
         
 
         self.loginBtn = QtGui.QPushButton(u'登录')
@@ -154,6 +223,14 @@ class QMainArea(QtGui.QWidget):
             mailInfo.setText(3, email.utils.parseaddr(_.get('to'))[1])
             mailInfo.setText(4, _sj)
             self.mailListView.addTopLevelItem(mailInfo)
+
+            
+    def getCurrentMail(self):
+        
+        _id = int(self.mailListView.currentItem().text(0))
+        mailView = QMailInfo(self.mailList[_id], parent=self)
+        mailView.exec_()
+        mailView.destroy()
 
     
     def errorAlert(self, s):
