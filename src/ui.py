@@ -31,6 +31,8 @@ class QMainArea(QtGui.QWidget):
     def __init__(self):
 
         super(QMainArea, self).__init__()
+        self.pop3 = pop3('')
+        self.smtp = smtp('')
         self.initLayout()
 
 
@@ -52,13 +54,24 @@ class QMainArea(QtGui.QWidget):
         self.logLable = QtGui.QLabel(u'日志')
         self.logView = QtGui.QTextBrowser()
 
-        self.mailList = QtGui.QTreeWidget()
-        self.mailList.setHeaderLabels([u'时间', 
+        FORMAT = Formatter('%(asctime)s %(levelname)s: %(message)s')
+        self.handler = loggerHandler(self.logView)
+        self.handler.setFormatter(FORMAT)
+        self.pop3.logger.addHandler(self.handler)
+        self.smtp.logger.addHandler(self.handler)
+        self.logView.connect(self.logView,
+                             QtCore.SIGNAL('newLog(QString)'), 
+                             lambda log: append_to_widget(self.logView, log))
+        
+
+        self.mailListView = QtGui.QTreeWidget()
+        self.mailListView.setHeaderLabels([u'时间', 
                                        u'发件人', 
                                        u'收件人', 
                                        u'主题'])
 
         self.loginBtn = QtGui.QPushButton(u'登录')
+        self.loginBtn.clicked.connect(self.login)
 
         self.logoutBtn = QtGui.QPushButton(u'断开')
 
@@ -80,9 +93,52 @@ class QMainArea(QtGui.QWidget):
         grid.addWidget(self.sendBtn, 5, 3, 1, 1)
         grid.addWidget(self.logLable, 6, 1, 1, 1)
         grid.addWidget(self.logView, 7, 1, 1, 3)
-        grid.addWidget(self.mailList, 1, 4, 7, 3)
+        grid.addWidget(self.mailListView, 1, 4, 7, 3)
 
         self.setLayout(grid)
+
+
+    def login(self):
+
+        if self.pop3AddressText.text() == '':
+            return self.errorAlert(u'请填写 POP3 服务器地址')
+        if self.smtpAddressText.text() == '':
+            return self.errorAlert(u'请填写 SMTP 服务器地址')
+        if self.accountText.text() == '':
+            return self.errorAlert(u'请填写用户名')
+        if self.passwdText.text() == '':
+            return self.errorAlert(u'请填写密码')
+
+        t = threading.Thread(target=self.loginRun)
+        t.start()
+
+        
+    def loginRun(self):
+
+        global mutex
+
+        mutex.acquire()
+
+        self.pop3.url = str(self.pop3AddressText.text())
+        self.smtp.url = str(self.smtpAddressText.text())
+
+        self.pop3.login(self.accountText.text(),
+                        self.passwdText.text())
+        self.pop3.getList()
+        self.pop3.getStat()
+        self.pop3.getAllMail()
+
+        mutex.release()
+
+    
+    def refreshMailList(self):
+        
+        self.mailList = self.pop3.mailList
+
+    
+    def errorAlert(self, s):
+
+        QtGui.QMessageBox.critical(self, u'错误', s)
 
         
 
