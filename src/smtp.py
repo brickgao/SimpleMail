@@ -5,7 +5,7 @@ from email.mime.text import MIMEText
 
 class smtp:
     
-    def __init__(self, url, port):
+    def __init__(self, url, port=25):
         
         self.url = url
         self.port = port

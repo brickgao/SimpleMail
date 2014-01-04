@@ -4,7 +4,7 @@ import socket, logging, email
 
 class pop3:
     
-    def __init__(self, url, port):
+    def __init__(self, url, port=110):
         
         self.url = url
         self.port = port
